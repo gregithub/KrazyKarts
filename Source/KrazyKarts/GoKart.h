@@ -27,7 +27,15 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 private:
-	FVector Velocity;
+	FVector Velocity ;
 	
+	
+	UPROPERTY(EditAnywhere)
+		float Mass =1000;	//kg
+	UPROPERTY(EditAnywhere)
+		float MaxDrivingForce = 10000;
+
+	float Throttle;
+
 	void  MoveForward(float Value);
 };
