@@ -24,15 +24,24 @@ void AGoKart::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	//*100 to cm
+
 	FVector Force = GetActorForwardVector()* MaxDrivingForce * Throttle;
 	FVector Acceleration = Force / Mass;
 	
 	Velocity = Velocity + Acceleration * DeltaTime;
 
+	UpdateLocationFromVelocity(DeltaTime);
+}
+
+void AGoKart::UpdateLocationFromVelocity(float DeltaTime)
+{
 	FVector Translation = Velocity * 100 * DeltaTime;
 
-	AddActorWorldOffset(Translation);
-
+	FHitResult Hit;
+	AddActorWorldOffset(Translation, true, &Hit);
+	if (Hit.IsValidBlockingHit()) {
+		Velocity = FVector::ZeroVector;
+	}
 }
 
 // Called to bind functionality to input
