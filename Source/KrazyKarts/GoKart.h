@@ -52,6 +52,9 @@ private:
 	float Throttle;
 	float SteeringThrow;
 	
+
+	void MoveForward(float Value);
+	void MoveRight(float Value);
 	UFUNCTION(Server, Reliable, WithValidation)
 		void Server_MoveForward(float Value);
 	UFUNCTION(Server, Reliable, WithValidation)
