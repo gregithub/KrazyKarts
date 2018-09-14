@@ -30,7 +30,11 @@ public:
 
 private:
 	FVector Velocity;
-	
+	UPROPERTY(Replicated)
+		FVector ReplicatedLocation;
+	UPROPERTY(Replicated)
+		FRotator ReplicatedRotation;
+
 	void ApplyRotation(float DeltaTime);
 
 	void UpdateLocationFromVelocity(float DeltaTime);
