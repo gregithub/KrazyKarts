@@ -29,11 +29,14 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 private:
-	FVector Velocity;
 	UPROPERTY(Replicated)
-		FVector ReplicatedLocation;
-	UPROPERTY(Replicated)
-		FRotator ReplicatedRotation;
+		FVector Velocity;
+
+	UPROPERTY(ReplicatedUsing = OnRep_ReplicatedTransform)
+		FTransform ReplicatedTransform;
+	UFUNCTION()
+		void OnRep_ReplicatedTransform();
+
 
 	void ApplyRotation(float DeltaTime);
 
@@ -53,8 +56,10 @@ private:
 	UPROPERTY(EditAnywhere)
 		float RollingRessistanceCoefficient = 0.015;
 
-	float Throttle;
-	float SteeringThrow;
+	UPROPERTY(Replicated)
+		float Throttle;
+	UPROPERTY(Replicated)
+		float SteeringThrow;
 	
 
 	void MoveForward(float Value);
