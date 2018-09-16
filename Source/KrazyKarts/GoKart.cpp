@@ -52,11 +52,13 @@ void AGoKart::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	if (IsLocallyControlled()) {
-		FGoKartMove Move;
-		Move.DeltaTime = DeltaTime;
-		Move.SteeringThrow = SteeringThrow;
-		Move.Throttle = Throttle;
-		//TODO: Set Move.Time
+		FGoKartMove Move = CreateMove(DeltaTime);
+
+		if (!HasAuthority()) {
+			UnacknowledgedMoves.Add(Move);
+			UE_LOG(LogTemp, Warning, TEXT("Queue length: %d"), UnacknowledgedMoves.Num());
+
+		}
 
 		Server_SendMove(Move);
 		SimulateMove(Move);
@@ -65,11 +67,33 @@ void AGoKart::Tick(float DeltaTime)
 	DrawDebugString(GetWorld(), FVector(0, 0, 100), GetEnumText(Role), this, FColor::White, DeltaTime);
 
 }
+FGoKartMove AGoKart::CreateMove(float DeltaTime) {
+	FGoKartMove Move;
+	Move.DeltaTime = DeltaTime;
+	Move.SteeringThrow = SteeringThrow;
+	Move.Throttle = Throttle;
+	Move.Time = GetWorld()->TimeSeconds;
+
+	return Move;
+}
 void AGoKart::OnRep_ServerState(){
 	SetActorTransform(ServerState.Transform);
 	Velocity = ServerState.Velocity;
 
+	ClearAcknowledgedMoves(ServerState.LastMove);
 }
+void AGoKart::ClearAcknowledgedMoves(FGoKartMove LastMove) {
+	TArray<FGoKartMove> NewMoves;
+
+	for (const FGoKartMove& Move : UnacknowledgedMoves) {
+		if (Move.Time > LastMove.Time) {
+			NewMoves.Add(Move);
+		}
+	}
+
+	UnacknowledgedMoves = NewMoves;
+}
+
 void AGoKart::SimulateMove(FGoKartMove Move) {
 
 	FVector Force = GetActorForwardVector()* MaxDrivingForce * Move.Throttle;

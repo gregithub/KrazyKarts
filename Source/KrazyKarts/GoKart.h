@@ -83,6 +83,9 @@ private:
 
 	FVector Velocity;
 
+	FGoKartMove CreateMove(float DeltaTime);
+
+
 	UPROPERTY(ReplicatedUsing = OnRep_ServerState)
 		FGoKartState ServerState;
 	UFUNCTION()
@@ -94,4 +97,7 @@ private:
 	
 	UFUNCTION(Server, Reliable, WithValidation)
 		void Server_SendMove(FGoKartMove Move);
+
+	TArray<FGoKartMove> UnacknowledgedMoves;
+	void ClearAcknowledgedMoves(FGoKartMove LastMove);
 };
