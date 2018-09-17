@@ -51,19 +51,25 @@ FString GetEnumText(ENetRole Role) {
 void AGoKart::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	if (IsLocallyControlled()) {
+	
+	//Client
+	if (Role == ROLE_AutonomousProxy) {
+		FGoKartMove Move = CreateMove(DeltaTime);
+		SimulateMove(Move);
+
+		UnacknowledgedMoves.Add(Move);
+		Server_SendMove(Move);
+	}
+	//We are the server and in control of the pawn
+	if (Role == ROLE_Authority && GetRemoteRole() == ROLE_SimulatedProxy) {
 		FGoKartMove Move = CreateMove(DeltaTime);
 
-		if (!HasAuthority()) {
-			UnacknowledgedMoves.Add(Move);
-			UE_LOG(LogTemp, Warning, TEXT("Queue length: %d"), UnacknowledgedMoves.Num());
-
-		}
-
 		Server_SendMove(Move);
-		SimulateMove(Move);
-	}
 
+	}
+	if (Role == ROLE_SimulatedProxy) {
+		SimulateMove(ServerState.LastMove);
+	}
 	DrawDebugString(GetWorld(), FVector(0, 0, 100), GetEnumText(Role), this, FColor::White, DeltaTime);
 
 }
@@ -81,6 +87,11 @@ void AGoKart::OnRep_ServerState(){
 	Velocity = ServerState.Velocity;
 
 	ClearAcknowledgedMoves(ServerState.LastMove);
+
+
+	for (const FGoKartMove& Move : UnacknowledgedMoves) {
+		SimulateMove(Move);
+	}
 }
 void AGoKart::ClearAcknowledgedMoves(FGoKartMove LastMove) {
 	TArray<FGoKartMove> NewMoves;
@@ -94,7 +105,7 @@ void AGoKart::ClearAcknowledgedMoves(FGoKartMove LastMove) {
 	UnacknowledgedMoves = NewMoves;
 }
 
-void AGoKart::SimulateMove(FGoKartMove Move) {
+void AGoKart::SimulateMove(const FGoKartMove& Move) {
 
 	FVector Force = GetActorForwardVector()* MaxDrivingForce * Move.Throttle;
 	Force += GetAirRessistance();
