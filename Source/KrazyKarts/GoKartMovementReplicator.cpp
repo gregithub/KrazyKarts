@@ -50,7 +50,7 @@ void UGoKartMovementReplicator::TickComponent(float DeltaTime, ELevelTick TickTy
 		UpdateServerState(LastMove);
 	}
 	if (GetOwnerRole() == ROLE_SimulatedProxy) {
-		MovementComponent->SimulateMove(ServerState.LastMove);
+		ClientTick(DeltaTime);
 	}
 
 	// ...
@@ -59,6 +59,17 @@ void UGoKartMovementReplicator::UpdateServerState(const FGoKartMove& Move) {
 	ServerState.LastMove = Move;
 	ServerState.Transform = GetOwner()->GetActorTransform();
 	ServerState.Velocity = MovementComponent->GetVelocity();
+}
+void UGoKartMovementReplicator::ClientTick(float DeltaTime) {
+	ClientTimeSinceUpdate += DeltaTime;
+	if (ClientTimeBetweenLastUpdate < KINDA_SMALL_NUMBER) { 
+		return; 
+	}
+	FVector TargetLocation = ServerState.Transform.GetLocation();
+	float LerpRatio = ClientTimeSinceUpdate / ClientTimeBetweenLastUpdate;
+	FVector StartLocation = ClientStartLocation;
+	FVector NewLocation = FMath::LerpStable(StartLocation, TargetLocation, LerpRatio);
+	GetOwner()->SetActorLocation(NewLocation);
 }
 bool  UGoKartMovementReplicator::Server_SendMove_Validate(FGoKartMove Move) {
 	return true;
@@ -74,6 +85,24 @@ void  UGoKartMovementReplicator::Server_SendMove_Implementation(FGoKartMove Move
 	//TODO: Update last move
 }
 void UGoKartMovementReplicator::OnRep_ServerState() {
+	switch (GetOwnerRole()) {
+	case ROLE_AutonomousProxy:
+		AutonomousProxy_OnRep_ServerState();
+		break;
+	case ROLE_SimulatedProxy:
+		SimulatedProxy_OnRep_ServerState();
+		break;
+	default:
+		break;
+	}
+		
+}
+void UGoKartMovementReplicator::SimulatedProxy_OnRep_ServerState() {
+	ClientTimeBetweenLastUpdate = ClientTimeSinceUpdate;
+	ClientTimeSinceUpdate = 0;	
+	ClientStartLocation = GetOwner()->GetActorLocation();
+}
+void UGoKartMovementReplicator::AutonomousProxy_OnRep_ServerState() {
 	if (MovementComponent == nullptr) return;
 
 
@@ -87,6 +116,7 @@ void UGoKartMovementReplicator::OnRep_ServerState() {
 		MovementComponent->SimulateMove(Move);
 	}
 }
+
 void UGoKartMovementReplicator::ClearAcknowledgedMoves(FGoKartMove LastMove) {
 	TArray<FGoKartMove> NewMoves;
 

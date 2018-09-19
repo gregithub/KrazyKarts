@@ -29,31 +29,41 @@ public:
 	// Sets default values for this component's properties
 	UGoKartMovementReplicator();
 
+	// Called every frame
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
 	
-public:	
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
-		
+	
 private:
+	UPROPERTY()
+		UGoKartMovementComponent * MovementComponent;
+
+	TArray<FGoKartMove> UnacknowledgedMoves;
+
 	void ClearAcknowledgedMoves(FGoKartMove LastMove);
+
+	void ClientTick(float DeltaTime);
+	float ClientTimeSinceUpdate;
+	float ClientTimeBetweenLastUpdate;
+	FVector ClientStartLocation;
+
+	void UpdateServerState(const FGoKartMove& Move);
 
 	UPROPERTY(ReplicatedUsing = OnRep_ServerState)
 		FGoKartState ServerState;
 	UFUNCTION()
 		void OnRep_ServerState();
-
-	TArray<FGoKartMove> UnacknowledgedMoves;
+	UFUNCTION()
+		void SimulatedProxy_OnRep_ServerState();
+	UFUNCTION()
+		void AutonomousProxy_OnRep_ServerState();
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void Server_SendMove(FGoKartMove Move);
 
-	UPROPERTY()
-		UGoKartMovementComponent * MovementComponent;
-
-	void UpdateServerState(const FGoKartMove& Move);
+	
 };
