@@ -11,7 +11,7 @@ USTRUCT()
 struct FGoKartState {
 	GENERATED_USTRUCT_BODY()
 
-	UPROPERTY()
+		UPROPERTY()
 		FGoKartMove LastMove;
 
 	UPROPERTY()
@@ -54,4 +54,6 @@ private:
 
 	UPROPERTY()
 		UGoKartMovementComponent * MovementComponent;
+
+	void UpdateServerState(const FGoKartMove& Move);
 };

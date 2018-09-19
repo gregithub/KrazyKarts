@@ -22,6 +22,7 @@ struct FGoKartMove {
 
 };
 
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class KRAZYKARTS_API UGoKartMovementComponent : public UActorComponent
 {
@@ -40,7 +41,6 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	
 	void SimulateMove(const FGoKartMove& Move);
-	FGoKartMove CreateMove(float DeltaTime);
 	
 	void SetVelocity(FVector Val) { Velocity = Val; };
 	FVector GetVelocity() { return Velocity; };
@@ -48,7 +48,11 @@ public:
 	void SetThrottle(float Val) { Throttle = Val; };
 	void SetSteeringThrow(float Val) { SteeringThrow = Val; };
 
+	FGoKartMove GetLastMove() { return LastMove; };
+
 private:
+	FGoKartMove CreateMove(float DeltaTime);
+
 	
 	void ApplyRotation(float DeltaTime, float SteeringThrow);
 	void UpdateLocationFromVelocity(float DeltaTime);
@@ -71,4 +75,6 @@ private:
 
 	float Throttle;
 	float SteeringThrow;	
+
+	FGoKartMove LastMove;
 };
