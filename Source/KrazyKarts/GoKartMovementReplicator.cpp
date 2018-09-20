@@ -65,11 +65,29 @@ void UGoKartMovementReplicator::ClientTick(float DeltaTime) {
 	if (ClientTimeBetweenLastUpdate < KINDA_SMALL_NUMBER) { 
 		return; 
 	}
-	FVector TargetLocation = ServerState.Transform.GetLocation();
+	if (MovementComponent == nullptr) return;
+
 	float LerpRatio = ClientTimeSinceUpdate / ClientTimeBetweenLastUpdate;
-	FVector StartLocation = ClientStartLocation;
-	FVector NewLocation = FMath::LerpStable(StartLocation, TargetLocation, LerpRatio);
+
+	FVector TargetLocation = ServerState.Transform.GetLocation();
+	FVector StartLocation = ClientStartTransform.GetLocation();
+	
+	float VelocityToDerivative = ClientTimeBetweenLastUpdate * 100;
+	FVector StartDerivative = ClientStartVelocity * VelocityToDerivative;
+	FVector TargetDerivative = ServerState.Velocity * VelocityToDerivative;//*100 to convert to cm
+
+	FQuat TargetRotation = ServerState.Transform.GetRotation();
+	FQuat StartRotation = ClientStartTransform.GetRotation();
+	FQuat NewRotation = FQuat::Slerp(StartRotation, TargetRotation, LerpRatio);
+
+	FVector NewLocation = FMath::CubicInterp(StartLocation, StartDerivative, TargetLocation, TargetDerivative, LerpRatio);
+	FVector NewDerivative = FMath::CubicInterpDerivative(StartLocation, StartDerivative, TargetLocation, TargetDerivative, LerpRatio);
+	FVector NewVelocity = NewDerivative / VelocityToDerivative;
+	MovementComponent->SetVelocity(NewVelocity);
+
+
 	GetOwner()->SetActorLocation(NewLocation);
+	GetOwner()->SetActorRotation(NewRotation);
 }
 bool  UGoKartMovementReplicator::Server_SendMove_Validate(FGoKartMove Move) {
 	return true;
@@ -98,9 +116,13 @@ void UGoKartMovementReplicator::OnRep_ServerState() {
 		
 }
 void UGoKartMovementReplicator::SimulatedProxy_OnRep_ServerState() {
+	if (MovementComponent == nullptr) return;
+
 	ClientTimeBetweenLastUpdate = ClientTimeSinceUpdate;
 	ClientTimeSinceUpdate = 0;	
-	ClientStartLocation = GetOwner()->GetActorLocation();
+
+	ClientStartTransform = GetOwner()->GetActorTransform();
+	ClientStartVelocity = MovementComponent->GetVelocity();
 }
 void UGoKartMovementReplicator::AutonomousProxy_OnRep_ServerState() {
 	if (MovementComponent == nullptr) return;

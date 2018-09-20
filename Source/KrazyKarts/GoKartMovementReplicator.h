@@ -49,7 +49,8 @@ private:
 	void ClientTick(float DeltaTime);
 	float ClientTimeSinceUpdate;
 	float ClientTimeBetweenLastUpdate;
-	FVector ClientStartLocation;
+	FTransform ClientStartTransform;
+	FVector ClientStartVelocity;
 
 	void UpdateServerState(const FGoKartMove& Move);
 
