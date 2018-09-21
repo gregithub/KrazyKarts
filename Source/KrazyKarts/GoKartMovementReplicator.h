@@ -69,6 +69,8 @@ private:
 	FTransform ClientStartTransform;
 	FVector ClientStartVelocity;
 
+	float ClientSImulatedTime;
+
 	void UpdateServerState(const FGoKartMove& Move);
 
 	UPROPERTY(ReplicatedUsing = OnRep_ServerState)
@@ -84,4 +86,8 @@ private:
 		void Server_SendMove(FGoKartMove Move);
 
 	
+	UPROPERTY()
+		USceneComponent* MeshOffsetRoot;
+	UFUNCTION(BlueprintCallable)
+		void SetMeshOffsetRoot(USceneComponent* Root) { MeshOffsetRoot = Root; };
 };

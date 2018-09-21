@@ -2,6 +2,7 @@
 
 #include "GoKartMovementReplicator.h"
 #include"UnrealNetwork.h"
+#include"GameFramework/Actor.h"
 
 
 // Sets default values for this component's properties
@@ -83,7 +84,9 @@ void UGoKartMovementReplicator::InterpolateRotation(float LerpRatio)
 	FQuat TargetRotation = ServerState.Transform.GetRotation();
 	FQuat StartRotation = ClientStartTransform.GetRotation();
 	FQuat NewRotation = FQuat::Slerp(StartRotation, TargetRotation, LerpRatio);
-	GetOwner()->SetActorRotation(NewRotation);
+	if (MeshOffsetRoot != nullptr) {
+		MeshOffsetRoot->SetWorldRotation(NewRotation);
+	}
 }
 FHermiteCubicSpline UGoKartMovementReplicator::CreateSpline() {
 	FHermiteCubicSpline Spline;
@@ -104,12 +107,24 @@ void UGoKartMovementReplicator::InterpolateVelocity(const FHermiteCubicSpline &S
 void UGoKartMovementReplicator::InterpolateLocation(const FHermiteCubicSpline &Spline, float LerpRatio)
 {
 	FVector NewLocation = Spline.InterpolateLocation(LerpRatio);
-	GetOwner()->SetActorLocation(NewLocation);
+	if (MeshOffsetRoot != nullptr) {
+		MeshOffsetRoot->SetWorldLocation(NewLocation);
+	}
 }
 float UGoKartMovementReplicator::VelocityToDerivative() {
 	return ClientTimeBetweenLastUpdate * 100;
 }
 bool  UGoKartMovementReplicator::Server_SendMove_Validate(FGoKartMove Move) {
+	float ProposedTime = ClientSImulatedTime + Move.DeltaTime;
+	bool ClientNotRunningAhead= ProposedTime < GetWorld()->TimeSeconds;
+	if (!ClientNotRunningAhead) {
+		UE_LOG(LogTemp, Warning, TEXT("Client is running too fast."));
+		return false;
+	}
+	if (!Move.IsValid()){
+		UE_LOG(LogTemp, Warning, TEXT("Client is running too fast."));
+		return false;
+	}
 	return true;
 	//TODO make better validation
 }
@@ -117,6 +132,7 @@ bool  UGoKartMovementReplicator::Server_SendMove_Validate(FGoKartMove Move) {
 void  UGoKartMovementReplicator::Server_SendMove_Implementation(FGoKartMove Move) {
 	if (MovementComponent == nullptr) return;
 
+	ClientSImulatedTime += Move.DeltaTime;
 	MovementComponent->SimulateMove(Move);
 
 	UpdateServerState(Move);
@@ -141,8 +157,13 @@ void UGoKartMovementReplicator::SimulatedProxy_OnRep_ServerState() {
 	ClientTimeBetweenLastUpdate = ClientTimeSinceUpdate;
 	ClientTimeSinceUpdate = 0;	
 
-	ClientStartTransform = GetOwner()->GetActorTransform();
+	if (MeshOffsetRoot != nullptr) {
+		ClientStartTransform.SetLocation(MeshOffsetRoot->GetComponentLocation());
+		ClientStartTransform.SetRotation(MeshOffsetRoot->GetComponentQuat());
+	}
 	ClientStartVelocity = MovementComponent->GetVelocity();
+
+	GetOwner()->SetActorTransform(ServerState.Transform);
 }
 void UGoKartMovementReplicator::AutonomousProxy_OnRep_ServerState() {
 	if (MovementComponent == nullptr) return;
